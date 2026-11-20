@@ -1,0 +1,9 @@
+streamlit>=1.40
+google-genai>=1.0
+pydantic>=2.0
+python-bcb>=0.3
+pandas>=2.0
+python-dotenv>=1.0
+tenacity>=8.2
+# optional
+yfinance>=0.2
