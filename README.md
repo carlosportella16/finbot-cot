@@ -24,13 +24,30 @@ The plan and analysis are kept in the "Ver raciocínio" (show reasoning) expande
 ## Project structure
 
 ```
-app.py           # Streamlit UI: sidebar, chat, reasoning expander
-raciocinio.py    # CoT pipeline: gerar_plano, analisar, sintetizar, executar_turno
-mercado.py       # BCB indicators (python-bcb) and optional quotes (yfinance)
-prompts.py       # SYSTEM_INSTRUCTION and prompt templates
-modelos.py       # Pydantic models: PerfilInvestidor, Objetivo, Plano, ResultadoTurno
-openspec/        # Project specs and changes (OpenSpec)
+app.py             # Streamlit UI: sidebar, chat, reasoning expander
+reasoning.py       # CoT pipeline: build_plan, analyze, synthesize, run_turn
+market.py          # BCB indicators (python-bcb) and optional quotes (yfinance)
+prompts.py         # SYSTEM_INSTRUCTION and prompt templates
+models.py          # Pydantic models: InvestorProfile, Goal, Plan, TurnResult
+requirements.txt   # Dependencies (minimum versions; yfinance is optional)
+.env.example       # Template for .env (GEMINI_API_KEY=)
+openspec/          # Project specs and changes (OpenSpec)
 ```
+
+> **Status:** project scaffold only. `app.py` checks the API key and shows the disclaimer; the other modules are placeholders filled in by later changes.
+
+## Dependencies
+
+| Library | Role |
+| --- | --- |
+| `streamlit` | Chat UI |
+| `google-genai` | Gemini SDK |
+| `pydantic` | Plan schema and profile validation |
+| `python-bcb` | Selic, CDI and IPCA from the Central Bank SGS |
+| `pandas` | BCB series handling |
+| `python-dotenv` | Loads `GEMINI_API_KEY` from `.env` |
+| `tenacity` | Retry with exponential backoff on 429/5xx |
+| `yfinance` | B3 quotes (optional) |
 
 ## Running
 
