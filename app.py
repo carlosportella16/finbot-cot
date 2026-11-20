@@ -13,11 +13,13 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from market import get_indicators
 from models import InvestorProfile, parse_goals
 from prompts import SYSTEM_INSTRUCTION
 
 MODEL = "gemini-3.1-flash-lite"
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
+INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
 
 st.set_page_config(page_title="FinBot", page_icon="💰")
 
@@ -47,6 +49,11 @@ def create_chat(profile: InvestorProfile, history=None):
         ),
         history=history,
     )
+
+
+def br_date(iso: str) -> str:
+    year, month, day = iso.split("-")
+    return f"{day}/{month}/{year}"
 
 
 with st.sidebar:
@@ -89,6 +96,20 @@ with st.sidebar:
         key="goals",
         alt="Objetivos financeiros com valor-alvo e prazo",
     )
+
+    st.subheader("Mercado")
+    indicators = get_indicators()
+    if indicators:
+        with st.container(horizontal=True):
+            for name, label in INDICATOR_LABELS.items():
+                st.metric(label, f"{indicators[name]['value']:.2f}%".replace(".", ","))
+        selic, cdi, ipca = (indicators[n]["date"] for n in INDICATOR_LABELS)
+        st.caption(
+            f"Fonte: Banco Central (SGS). Selic em {br_date(selic)}, "
+            f"CDI em {br_date(cdi)}, IPCA de {br_date(ipca)[3:]}."
+        )
+    else:
+        st.warning("Indicadores do BCB indisponíveis no momento.")
 
 profile = InvestorProfile(
     risk_profile=risk_profile,
