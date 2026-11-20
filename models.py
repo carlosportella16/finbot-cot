@@ -34,3 +34,35 @@ def parse_goals(rows: list[dict]) -> list[Goal]:
         except ValidationError:
             pass
     return goals
+
+
+class Plan(BaseModel):
+    """Stage 1 output (response_schema): what to analyze and whether to search news."""
+
+    intent: str = Field(min_length=1)
+    related_goal: str | None = None
+    needs_news: bool
+    search_queries: list[str] = Field(max_length=3)
+    steps: list[str] = Field(min_length=3, max_length=6)
+
+
+def default_plan(question: str) -> Plan:
+    """Fallback when the model returns an invalid plan; never searches."""
+    return Plan(
+        intent=question,
+        needs_news=False,
+        search_queries=[],
+        steps=[
+            "Entender o objetivo, o prazo e a liquidez que a pergunta exige",
+            "Comparar as opções pela rentabilidade líquida de IR frente ao CDI",
+            "Checar a adequação ao perfil e às regras de reserva e prazo",
+        ],
+    )
+
+
+class TurnResult(BaseModel):
+    answer: str
+    plan: Plan
+    analysis: str
+    sources: list[str] = []  # URLs from the search grounding metadata
+    warnings: list[str] = []

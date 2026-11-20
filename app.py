@@ -16,8 +16,8 @@ from google.genai import types
 from market import get_indicators
 from models import InvestorProfile, parse_goals
 from prompts import SYSTEM_INSTRUCTION
+from reasoning import MODEL
 
-MODEL = "gemini-3.1-flash-lite"
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
 
@@ -45,7 +45,10 @@ def create_chat(profile: InvestorProfile, history=None):
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION.format(
                 profile=profile.model_dump_json(indent=2)
-            )
+            ),
+            # The chat only runs the synthesis stage. Set here, not in send_message:
+            # a per-call config replaces the whole chat config, system instruction included.
+            temperature=0.5,
         ),
         history=history,
     )
