@@ -51,7 +51,7 @@ openspec/          # Project specs and changes (OpenSpec)
 
 ## Running
 
-Requires Python 3.10+ and an API key from [Google AI Studio](https://aistudio.google.com/).
+Requires Python 3.10+ (tested with 3.12) and an API key from [Google AI Studio](https://aistudio.google.com/).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
@@ -59,6 +59,16 @@ pip install -r requirements.txt
 cp .env.example .env    # set GEMINI_API_KEY=...
 streamlit run app.py
 ```
+
+### Verify setup
+
+Checks that your key can reach the model. It should print a short greeting:
+
+```bash
+python -c "from dotenv import load_dotenv; load_dotenv(); from google import genai; c = genai.Client(); print(c.models.generate_content(model='gemini-3.1-flash-lite', contents='olá').text)"
+```
+
+Keep the client in a variable: with `genai.Client().models.generate_content(...)` the temporary client is closed before the request is sent (`RuntimeError: Cannot send a request, as the client has been closed.`).
 
 ## Usage
 
