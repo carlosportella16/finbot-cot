@@ -1,0 +1,22 @@
+# Segredos
+.env
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Ferramentas locais (Claude Code / OpenSpec skills geradas)
+.claude/
+OpenSpec/
+
+# Sistema / IDE
+.DS_Store
+.vscode/
+.idea/
+
+Spec de *
