@@ -89,7 +89,7 @@ On the free tier, grounding for Gemini 3.x models comes with a quota of 0 and re
 ## Usage
 
 1. If there is no `GEMINI_API_KEY` in `.env`, paste your Gemini API key in the sidebar (free at [Google AI Studio](https://aistudio.google.com/apikey)).
-2. Fill in the profile in the sidebar: investor profile, invested assets, emergency fund, monthly costs, monthly contribution and goals.
+2. Fill in the profile in the sidebar: investor profile, invested assets, emergency fund, monthly costs, monthly contribution and goals. Money fields have a fixed comma: type only digits and they fill in from the right (`123456` becomes `1.234,56`); values apply as you type, no Enter needed.
 3. Ask questions in the chat, e.g. "Tenho R$ 20 mil na poupança, onde aplicar?" (I have R$ 20k in savings, where should I invest it?).
 4. While it answers, three loading messages show the stages: plan, analysis and synthesis.
 5. Open "Ver raciocínio" below an answer to see the plan, the calculations and the sources.

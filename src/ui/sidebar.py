@@ -5,6 +5,7 @@ import streamlit as st
 
 from market import get_indicators
 from models import InvestorProfile, parse_goals
+from ui.money_input import money_input
 
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
@@ -53,6 +54,7 @@ def render_key_input() -> None:
         "Chave da API do Gemini",
         type="password",
         key="user_api_key",
+        live="300ms",  # commits after a pause, no Enter needed
         placeholder="Cole sua chave aqui",
         help="Usada só nesta sessão do navegador: não é salva nem registrada.",
     )
@@ -97,18 +99,10 @@ def render_sidebar(key_required: bool) -> InvestorProfile:
             key="risk_profile",
         )
         with st.container(border=True):
-            invested_assets = st.number_input(
-                "Patrimônio investido (R$)", min_value=0.0, step=1000.0, key="invested_assets"
-            )
-            emergency_fund = st.number_input(
-                "Reserva de emergência (R$)", min_value=0.0, step=1000.0, key="emergency_fund"
-            )
-            monthly_cost = st.number_input(
-                "Custo de vida mensal (R$)", min_value=0.0, step=100.0, key="monthly_cost"
-            )
-            monthly_contribution = st.number_input(
-                "Aporte mensal (R$)", min_value=0.0, step=100.0, key="monthly_contribution"
-            )
+            invested_assets = money_input("Patrimônio investido (R$)", key="invested_assets")
+            emergency_fund = money_input("Reserva de emergência (R$)", key="emergency_fund")
+            monthly_cost = money_input("Custo de vida mensal (R$)", key="monthly_cost")
+            monthly_contribution = money_input("Aporte mensal (R$)", key="monthly_contribution")
             render_reserve_badge(emergency_fund, monthly_cost)
         st.subheader("Objetivos", icon=":material/flag:")
         goals_table = st.data_editor(
