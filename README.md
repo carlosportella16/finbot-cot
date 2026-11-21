@@ -61,7 +61,7 @@ Requires Python 3.10+ (tested with 3.12) and an API key from [Google AI Studio](
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env    # set GEMINI_API_KEY=...
+cp .env.example .env    # optional: set GEMINI_API_KEY=... (see "Gemini API key")
 streamlit run src/app.py   # from the project root, so .streamlit/ and .env are found
 ```
 
@@ -75,23 +75,31 @@ python -c "from dotenv import load_dotenv; load_dotenv(); from google import gen
 
 Keep the client in a variable: with `genai.Client().models.generate_content(...)` the temporary client is closed before the request is sent (`RuntimeError: Cannot send a request, as the client has been closed.`).
 
+### Gemini API key
+
+- **Server key:** `GEMINI_API_KEY` in `.env` (local) or in the app's Secrets (Streamlit Community Cloud). When it is set, the app uses it and never asks for a key. Everyone uses it, and you pay for every question.
+- **Each user's own key:** only when the server has no key, the sidebar shows a password field for the user's key. It lives only in that browser session (not saved or logged), and the chat stays locked until a key is entered.
+
+To make every visitor of a public deploy use their own key, simply don't set `GEMINI_API_KEY` in the deploy's Secrets.
+
 ### News search (Google Search grounding)
 
 On the free tier, grounding for Gemini 3.x models comes with a quota of 0 and returns `429 RESOURCE_EXHAUSTED`. Enable billing on the key's project in Google AI Studio to get news and sources. Without it, the app still works and answers with the note "sem notícias recentes".
 
 ## Usage
 
-1. Fill in the profile in the sidebar: investor profile, invested assets, emergency fund, monthly costs, monthly contribution and goals.
-2. Ask questions in the chat, e.g. "Tenho R$ 20 mil na poupança, onde aplicar?" (I have R$ 20k in savings, where should I invest it?).
-3. While it answers, three loading messages show the stages: plan, analysis and synthesis.
-4. Open "Ver raciocínio" below an answer to see the plan, the calculations and the sources.
-5. Use "Nova conversa" (new conversation) to reset the chat and the model's memory while keeping the profile, or "Limpar perfil" (clear profile) to also reset the profile and goals.
+1. If there is no `GEMINI_API_KEY` in `.env`, paste your Gemini API key in the sidebar (free at [Google AI Studio](https://aistudio.google.com/apikey)).
+2. Fill in the profile in the sidebar: investor profile, invested assets, emergency fund, monthly costs, monthly contribution and goals.
+3. Ask questions in the chat, e.g. "Tenho R$ 20 mil na poupança, onde aplicar?" (I have R$ 20k in savings, where should I invest it?).
+4. While it answers, three loading messages show the stages: plan, analysis and synthesis.
+5. Open "Ver raciocínio" below an answer to see the plan, the calculations and the sources.
+6. Use "Nova conversa" (new conversation) to reset the chat and the model's memory while keeping the profile, or "Limpar perfil" (clear profile) to also reset the profile and goals.
 
 ## Error handling
 
 | Failure | What the user sees |
 | --- | --- |
-| `GEMINI_API_KEY` missing | Instructions to create `.env`; the app stops |
+| No key (server or user) | Asks for the user's key in the sidebar; chat locked until then |
 | Invalid key (400/401/403) | "Chave inválida ou sem permissão", no retry |
 | Rate limit (429) | Up to 3 retries (2 s, 4 s, 8 s), then "Limite atingido, aguarde um minuto" |
 | Server error (5xx) | Same retries, then a "service unavailable" message |
@@ -106,7 +114,7 @@ A failed turn is not stored: the chat history and the model's memory stay as the
 
 | # | Scenario | Expected |
 | --- | --- | --- |
-| T1 | Start without `GEMINI_API_KEY` | Error with instructions, app stopped, no traceback |
+| T1 | Start without any Gemini key | Prompt to enter a key in the sidebar, chat locked, no traceback |
 | T2 | Moderate profile: "Tenho R$ 20 mil na poupança, onde aplicar?" | Plan with 3–6 steps, analysis with after-tax returns vs. current CDI, answer with disclaimer |
 | T3 | Then: "E se eu precisar do dinheiro em 1 ano?" | Reuses the R$ 20k and adjusts liquidity |
 | T4 | "Como a última decisão do Copom afeta minha carteira?" | Plan needs news; sources listed in the expander |
