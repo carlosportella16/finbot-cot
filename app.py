@@ -23,6 +23,15 @@ from reasoning import CONNECTION_ERRORS, MODEL, run_turn
 
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
+USER_AVATAR = ":material/person:"
+BOT_AVATAR = ":material/finance_mode:"
+# Short enough to fit a 375 px screen without being cut.
+SUGGESTIONS = [
+    "Onde aplicar R$ 20 mil da poupança?",
+    "CDB ou LCI para 2 anos?",
+    "Como montar minha reserva?",
+    "O que muda com o último Copom?",
+]
 PROFILE_KEYS = [
     "risk_profile", "invested_assets", "emergency_fund", "monthly_cost",
     "monthly_contribution", "goals",
@@ -30,7 +39,7 @@ PROFILE_KEYS = [
 
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="FinBot", page_icon="💰")
+st.set_page_config(page_title="FinBot", page_icon=":material/account_balance:")
 
 load_dotenv()
 if not os.environ.get("GEMINI_API_KEY"):
@@ -63,6 +72,10 @@ def create_chat(profile: InvestorProfile, history=None):
     )
 
 
+def brl(value: float) -> str:
+    return "R$ " + f"{value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
 def br_date(iso: str) -> str:
     year, month, day = iso.split("-")
     return f"{day}/{month}/{year}"
@@ -70,7 +83,7 @@ def br_date(iso: str) -> str:
 
 def render_reasoning(turn: TurnResult) -> None:
     plan = turn.plan
-    with st.expander("Ver raciocínio", type="compact"):
+    with st.expander("Ver raciocínio", type="compact", icon=":material/psychology:"):
         st.markdown(f"**Intenção:** {plan.intent}")
         if plan.related_goal:
             st.markdown(f"**Objetivo relacionado:** {plan.related_goal}")
@@ -110,6 +123,23 @@ def error_message(exc: Exception) -> str:
     return "Algo deu errado ao responder. Tente de novo."
 
 
+def use_suggestion() -> None:
+    # Callback: hand the chosen suggestion to the turn below and clear the pills.
+    st.session_state.pending_question = st.session_state.suggestion
+    st.session_state.suggestion = None
+
+
+def render_reserve_badge(emergency_fund: float, monthly_cost: float) -> None:
+    if monthly_cost <= 0:
+        return
+    missing = 6 * monthly_cost - emergency_fund
+    if missing <= 0:
+        st.badge("Reserva completa", icon=":material/check_circle:", color="green")
+    else:
+        st.badge("Reserva incompleta", icon=":material/warning:", color="orange")
+        st.caption(f"Faltam {brl(missing)} para cobrir 6 meses de custo de vida.")
+
+
 def reset_conversation() -> None:
     # The init block below recreates the chat without history, with the current profile.
     st.session_state.pop("chat", None)
@@ -127,27 +157,30 @@ with st.sidebar:
     with st.container(horizontal=True):
         st.button("Nova conversa", icon=":material/add_comment:", on_click=reset_conversation)
         st.button("Limpar perfil", icon=":material/restart_alt:", on_click=reset_profile)
-    st.header("Seu perfil")
-    risk_profile = st.radio(
+    st.subheader("Seu perfil", icon=":material/person:")
+    risk_profile = st.segmented_control(
         "Perfil de investidor",
         list(RISK_LABELS),
-        index=1,
+        default="moderate",
+        required=True,
         format_func=RISK_LABELS.get,
         key="risk_profile",
     )
-    invested_assets = st.number_input(
-        "Patrimônio investido (R$)", min_value=0.0, step=1000.0, key="invested_assets"
-    )
-    emergency_fund = st.number_input(
-        "Reserva de emergência (R$)", min_value=0.0, step=1000.0, key="emergency_fund"
-    )
-    monthly_cost = st.number_input(
-        "Custo de vida mensal (R$)", min_value=0.0, step=100.0, key="monthly_cost"
-    )
-    monthly_contribution = st.number_input(
-        "Aporte mensal (R$)", min_value=0.0, step=100.0, key="monthly_contribution"
-    )
-    st.subheader("Objetivos")
+    with st.container(border=True):
+        invested_assets = st.number_input(
+            "Patrimônio investido (R$)", min_value=0.0, step=1000.0, key="invested_assets"
+        )
+        emergency_fund = st.number_input(
+            "Reserva de emergência (R$)", min_value=0.0, step=1000.0, key="emergency_fund"
+        )
+        monthly_cost = st.number_input(
+            "Custo de vida mensal (R$)", min_value=0.0, step=100.0, key="monthly_cost"
+        )
+        monthly_contribution = st.number_input(
+            "Aporte mensal (R$)", min_value=0.0, step=100.0, key="monthly_contribution"
+        )
+        render_reserve_badge(emergency_fund, monthly_cost)
+    st.subheader("Objetivos", icon=":material/flag:")
     goals_table = st.data_editor(
         pd.DataFrame(
             {
@@ -160,14 +193,14 @@ with st.sidebar:
         hide_index=True,
         column_config={
             "name": st.column_config.TextColumn("Objetivo"),
-            "target_amount": st.column_config.NumberColumn("Valor-alvo (R$)", min_value=0),
-            "horizon_years": st.column_config.NumberColumn("Prazo (anos)", min_value=0),
+            "target_amount": st.column_config.NumberColumn("Valor (R$)", min_value=0),
+            "horizon_years": st.column_config.NumberColumn("Anos", min_value=0),
         },
         key="goals",
         alt="Objetivos financeiros com valor-alvo e prazo",
     )
 
-    st.subheader("Mercado")
+    st.subheader("Mercado", icon=":material/monitoring:")
     indicators = get_indicators()
     if indicators:
         with st.container(horizontal=True):
@@ -201,23 +234,41 @@ elif profile != st.session_state.profile:
     st.session_state.chat = create_chat(profile, st.session_state.chat.get_history())
     st.session_state.profile = profile
 
-st.title("FinBot")
+st.title("FinBot", icon=":material/account_balance:")
+st.caption(
+    "Seu copiloto de investimentos: analisa seu perfil, seus objetivos e as taxas do "
+    "Banco Central antes de responder."
+)
 st.sidebar.caption(
     "Conteúdo educacional. Não é recomendação de investimento; a decisão é sempre sua."
 )
 
+# Read first so the welcome screen is not drawn above the first turn. The input
+# stays pinned to the bottom wherever it is called.
+question = st.chat_input("Pergunte sobre seus investimentos") or st.session_state.pop(
+    "pending_question", None
+)
+
+if not st.session_state.messages and not question:
+    with st.chat_message("assistant", avatar=BOT_AVATAR):
+        st.markdown(
+            "Olá! Preencha seu perfil na barra lateral e me pergunte sobre onde investir, "
+            "reserva de emergência ou o cenário de juros."
+        )
+        st.pills("Experimente perguntar", SUGGESTIONS, key="suggestion", on_change=use_suggestion)
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        if message["role"] == "assistant":
+    if message["role"] == "assistant":
+        with st.chat_message("assistant", avatar=BOT_AVATAR):
             render_assistant(message)
-        else:
+    else:
+        with st.chat_message("user", avatar=USER_AVATAR):
             st.markdown(message["content"])
 
-if question := st.chat_input("Pergunte sobre seus investimentos"):
-    with st.chat_message("user"):
+if question:
+    with st.chat_message("user", avatar=USER_AVATAR):
         st.markdown(question)
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=BOT_AVATAR):
         try:
             turn = run_turn(get_client(), st.session_state.chat, question, profile)
         except Exception as exc:
