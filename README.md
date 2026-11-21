@@ -24,11 +24,18 @@ The plan, the analysis and the news sources are kept in a collapsed "Ver racioc�
 ## Project structure
 
 ```
-app.py             # Streamlit UI: sidebar, chat, reasoning expander, error messages
-reasoning.py       # CoT pipeline: build_plan, analyze, synthesize, run_turn (+ retries)
-market.py          # BCB indicators (python-bcb), cached for 1 h
-prompts.py         # SYSTEM_INSTRUCTION and the plan, analysis and synthesis prompts
-models.py          # Pydantic models: InvestorProfile, Goal, Plan, Source, TurnResult
+src/
+├── app.py         # Entry point: API key check, chat session, page layout
+├── ui/
+│   ├── header.py  # Brand mark and wordmark
+│   ├── sidebar.py # Profile, goals, BCB indicators, reset buttons, reserve badge
+│   └── chat.py    # Welcome screen, history, reasoning expander, error messages
+├── reasoning.py   # CoT pipeline: build_plan, analyze, synthesize, run_turn (+ retries)
+├── market.py      # BCB indicators (python-bcb), cached for 1 h
+├── prompts.py     # SYSTEM_INSTRUCTION and the plan, analysis and synthesis prompts
+└── models.py      # Pydantic models: InvestorProfile, Goal, Plan, Source, TurnResult
+.streamlit/
+└── config.toml    # Light and dark theme
 requirements.txt   # Pinned dependencies
 .env.example       # Template for .env (GEMINI_API_KEY=)
 ```
@@ -55,7 +62,7 @@ Requires Python 3.10+ (tested with 3.12) and an API key from [Google AI Studio](
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env    # set GEMINI_API_KEY=...
-streamlit run app.py
+streamlit run src/app.py   # from the project root, so .streamlit/ and .env are found
 ```
 
 ### Verify setup
