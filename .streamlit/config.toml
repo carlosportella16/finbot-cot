@@ -1,0 +1,62 @@
+# FinBot theme: sober finance palette (navy surfaces, emerald accent), light and dark.
+# Defining both [theme.light] and [theme.dark] keeps the appearance toggle in settings.
+
+[theme]
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 15
+baseFontWeight = 400
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+# Market metrics live in the narrow sidebar; the 2.25rem default is too large there.
+metricValueFontSize = "1.5rem"
+
+[theme.light]
+primaryColor = "#059669"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
+codeBackgroundColor = "#F1F5F9"
+textColor = "#0F172A"
+linkColor = "#047857"
+borderColor = "#E2E8F0"
+codeTextColor = "#0F172A"
+grayColor = "#64748B"
+greenColor = "#059669"
+redColor = "#DC2626"
+orangeColor = "#D97706"
+yellowColor = "#CA8A04"
+blueColor = "#2563EB"
+
+[theme.dark]
+primaryColor = "#34D399"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#111A2E"
+codeBackgroundColor = "#111A2E"
+textColor = "#E2E8F0"
+linkColor = "#6EE7B7"
+borderColor = "#1E293B"
+codeTextColor = "#E2E8F0"
+grayColor = "#94A3B8"
+greenColor = "#34D399"
+redColor = "#F87171"
+orangeColor = "#FBBF24"
+yellowColor = "#FACC15"
+blueColor = "#60A5FA"
+
+[theme.light.sidebar]
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0F172A"
+borderColor = "#E2E8F0"
+primaryColor = "#059669"
+
+[theme.dark.sidebar]
+backgroundColor = "#070D18"
+secondaryBackgroundColor = "#111A2E"
+textColor = "#E2E8F0"
+borderColor = "#1E293B"
+primaryColor = "#34D399"
