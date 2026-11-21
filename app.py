@@ -7,21 +7,28 @@ The profile goes into the system instruction; changing it recreates the chat wit
 its history.
 """
 
+import logging
 import os
 
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 
 from market import get_indicators
 from models import InvestorProfile, TurnResult, parse_goals
 from prompts import SYSTEM_INSTRUCTION
-from reasoning import MODEL, run_turn
+from reasoning import CONNECTION_ERRORS, MODEL, run_turn
 
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
+PROFILE_KEYS = [
+    "risk_profile", "invested_assets", "emergency_fund", "monthly_cost",
+    "monthly_contribution", "goals",
+]
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="FinBot", page_icon="💰")
 
@@ -88,7 +95,38 @@ def render_assistant(message: dict) -> None:
     render_reasoning(turn)
 
 
+def error_message(exc: Exception) -> str:
+    """User-facing text for a failed turn (retries already happened in reasoning)."""
+    if isinstance(exc, errors.APIError):
+        if exc.code in (400, 401, 403):
+            return "Chave inválida ou sem permissão. Confira a `GEMINI_API_KEY` no `.env`."
+        if exc.code == 429:
+            return "Limite atingido, aguarde um minuto e tente de novo."
+        if exc.code >= 500:
+            return "O Gemini está indisponível no momento. Tente de novo em instantes."
+    if isinstance(exc, CONNECTION_ERRORS):
+        return "Sem conexão com o Gemini. Verifique sua internet e tente de novo."
+    logger.exception("Unexpected error while answering")
+    return "Algo deu errado ao responder. Tente de novo."
+
+
+def reset_conversation() -> None:
+    # The init block below recreates the chat without history, with the current profile.
+    st.session_state.pop("chat", None)
+    st.session_state.pop("messages", None)
+
+
+def reset_profile() -> None:
+    # Runs as a callback, before the widgets exist, so their keys can be cleared.
+    reset_conversation()
+    for key in PROFILE_KEYS:
+        st.session_state.pop(key, None)
+
+
 with st.sidebar:
+    with st.container(horizontal=True):
+        st.button("Nova conversa", icon=":material/add_comment:", on_click=reset_conversation)
+        st.button("Limpar perfil", icon=":material/restart_alt:", on_click=reset_profile)
     st.header("Seu perfil")
     risk_profile = st.radio(
         "Perfil de investidor",
@@ -180,8 +218,12 @@ if question := st.chat_input("Pergunte sobre seus investimentos"):
     with st.chat_message("user"):
         st.markdown(question)
     with st.chat_message("assistant"):
-        turn = run_turn(get_client(), st.session_state.chat, question, profile)
-        answer = {"role": "assistant", "content": turn.answer, "turn": turn}
-        render_assistant(answer)
-    # Appended only after the pipeline answered, so a failed turn leaves history untouched.
-    st.session_state.messages += [{"role": "user", "content": question}, answer]
+        try:
+            turn = run_turn(get_client(), st.session_state.chat, question, profile)
+        except Exception as exc:
+            # The question is not stored, so screen and chat memory stay as before.
+            st.error(error_message(exc))
+        else:
+            answer = {"role": "assistant", "content": turn.answer, "turn": turn}
+            render_assistant(answer)
+            st.session_state.messages += [{"role": "user", "content": question}, answer]
