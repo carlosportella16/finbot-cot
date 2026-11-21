@@ -116,3 +116,7 @@ Presentation video: _TBD_
 ## Authors
 
 Carlos Portella and Felipe Silva
+
+## License
+
+[MIT](LICENSE)
