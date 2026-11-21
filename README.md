@@ -21,6 +21,8 @@ The plan, the analysis and the news sources are kept in a collapsed "Ver racioc�
 3. Goals with a horizon under 2 years exclude equities as the base allocation.
 4. Returns are always compared net of income tax (LCI and LCA are tax-exempt).
 
+Why it was built this way (Chain-of-Thought, the three stages, memory, data sources, error handling) is explained in [docs/decisions.md](docs/decisions.md); changes from the original spec and next steps are in [docs/improvements.md](docs/improvements.md).
+
 ## Project structure
 
 ```
@@ -36,6 +38,9 @@ src/
 └── models.py      # Pydantic models: InvestorProfile, Goal, Plan, Source, TurnResult
 .streamlit/
 └── config.toml    # Light and dark theme
+docs/
+├── decisions.md   # Design decisions and their rationale
+└── improvements.md # Changes from the spec and next steps
 requirements.txt   # Pinned dependencies
 .env.example       # Template for .env (GEMINI_API_KEY=)
 ```
