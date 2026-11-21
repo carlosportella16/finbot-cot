@@ -1,9 +1,10 @@
 """FinBot Streamlit entry point.
 
-Checks GEMINI_API_KEY, draws the sidebar (ui.sidebar) and the chat (ui.chat), and
-keeps the chat session that holds the model's memory. Each question goes through the
+Picks the Gemini key (the server's GEMINI_API_KEY, or, when it is missing, the user's
+own key from the sidebar), draws the sidebar (ui.sidebar) and the chat (ui.chat), and keeps the
+chat session that holds the model's memory. Each question goes through the
 Chain-of-Thought pipeline in reasoning.py. The profile goes into the system
-instruction; changing it recreates the chat with its history.
+instruction; changing it, or the key, recreates the chat with its history.
 """
 
 import os
@@ -23,23 +24,32 @@ from ui.sidebar import render_sidebar
 st.set_page_config(page_title="FinBot", page_icon=":material/account_balance:")
 
 load_dotenv()
-if not os.environ.get("GEMINI_API_KEY"):
-    st.error(
-        "GEMINI_API_KEY não encontrada. Copie o `.env.example` para `.env` "
-        "e preencha `GEMINI_API_KEY=` com a chave gerada no Google AI Studio."
-    )
-    st.stop()
+# Optional: without it (e.g. no secret on Streamlit Cloud) every user must bring a key.
+SERVER_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 
 @st.cache_resource
-def get_client() -> genai.Client:
+def get_server_client() -> genai.Client:
     # One long-lived client per process: an unreferenced Client is closed before
     # its request is sent.
-    return genai.Client()
+    return genai.Client(api_key=SERVER_KEY)
 
 
-def create_chat(profile: InvestorProfile, history=None):
-    return get_client().chats.create(
+def get_client() -> genai.Client | None:
+    """The server key wins; without it, the user's key lives only in this browser session."""
+    if SERVER_KEY:
+        return get_server_client()
+    user_key = st.session_state.get("user_api_key", "").strip()
+    if not user_key:
+        return None
+    if st.session_state.get("user_client_key") != user_key:
+        st.session_state.user_client = genai.Client(api_key=user_key)
+        st.session_state.user_client_key = user_key
+    return st.session_state.user_client
+
+
+def create_chat(client: genai.Client, profile: InvestorProfile, history=None):
+    return client.chats.create(
         model=MODEL,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION.format(
@@ -53,18 +63,28 @@ def create_chat(profile: InvestorProfile, history=None):
     )
 
 
-profile = render_sidebar()
+profile = render_sidebar(key_required=not SERVER_KEY)
+client = get_client()
+render_header()
+
+if client is None:
+    st.info(
+        "Informe sua chave do Gemini na barra lateral para começar. "
+        "Gere uma gratuitamente no [Google AI Studio](https://aistudio.google.com/apikey).",
+        icon=":material/key:",
+    )
+    st.stop()
 
 # The chat session holds the model's memory, so it lives per browser session.
-# The system instruction is fixed at creation, so a profile change recreates the
-# chat and carries the history over. The reset buttons drop "chat" to start over.
+# The system instruction and the key are fixed at creation, so a profile or key
+# change recreates the chat and carries the history over. The reset buttons drop
+# "chat" to start over.
 if "chat" not in st.session_state:
-    st.session_state.chat = create_chat(profile)
-    st.session_state.profile = profile
+    st.session_state.chat = create_chat(client, profile)
     st.session_state.messages = []
-elif profile != st.session_state.profile:
-    st.session_state.chat = create_chat(profile, st.session_state.chat.get_history())
-    st.session_state.profile = profile
+elif profile != st.session_state.profile or client is not st.session_state.chat_client:
+    st.session_state.chat = create_chat(client, profile, st.session_state.chat.get_history())
+st.session_state.profile = profile
+st.session_state.chat_client = client
 
-render_header()
-render_chat(get_client(), profile)
+render_chat(client, profile)

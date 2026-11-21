@@ -1,4 +1,4 @@
-"""Sidebar: conversation actions, investor profile, goals and BCB indicators."""
+"""Sidebar: Gemini key, conversation actions, investor profile, goals and BCB indicators."""
 
 import pandas as pd
 import streamlit as st
@@ -47,6 +47,18 @@ def render_reserve_badge(emergency_fund: float, monthly_cost: float) -> None:
         st.caption(f"Faltam {brl(missing)} para cobrir 6 meses de custo de vida.")
 
 
+def render_key_input() -> None:
+    # type="password" masks it on screen; the value stays only in this session's state.
+    st.text_input(
+        "Chave da API do Gemini",
+        type="password",
+        key="user_api_key",
+        placeholder="Cole sua chave aqui",
+        help="Usada só nesta sessão do navegador: não é salva nem registrada.",
+    )
+    st.caption("Gere uma gratuitamente no [Google AI Studio](https://aistudio.google.com/apikey).")
+
+
 def render_indicators() -> None:
     st.subheader("Mercado", icon=":material/monitoring:")
     indicators = get_indicators()
@@ -63,9 +75,15 @@ def render_indicators() -> None:
     )
 
 
-def render_sidebar() -> InvestorProfile:
-    """Draws the sidebar and returns the profile the user filled in."""
+def render_sidebar(key_required: bool) -> InvestorProfile:
+    """Draws the sidebar and returns the profile the user filled in.
+
+    key_required: the server has no GEMINI_API_KEY, so the user must bring one.
+    """
     with st.sidebar:
+        if key_required:
+            st.subheader("Sua chave do Gemini", icon=":material/key:")
+            render_key_input()
         with st.container(horizontal=True):
             st.button("Nova conversa", icon=":material/add_comment:", on_click=reset_conversation)
             st.button("Limpar perfil", icon=":material/restart_alt:", on_click=reset_profile)

@@ -53,7 +53,7 @@ def error_message(exc: Exception) -> str:
     """User-facing text for a failed turn (retries already happened in reasoning)."""
     if isinstance(exc, errors.APIError):
         if exc.code in (400, 401, 403):
-            return "Chave inválida ou sem permissão. Confira a `GEMINI_API_KEY` no `.env`."
+            return "Chave inválida ou sem permissão. Confira a chave do Gemini informada."
         if exc.code == 429:
             return "Limite atingido, aguarde um minuto e tente de novo."
         if exc.code >= 500:
