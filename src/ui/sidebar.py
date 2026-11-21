@@ -9,10 +9,6 @@ from ui.money_input import money_input
 
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
-PROFILE_KEYS = [
-    "risk_profile", "invested_assets", "emergency_fund", "monthly_cost",
-    "monthly_contribution", "goals",
-]
 
 
 def brl(value: float) -> str:
@@ -31,10 +27,14 @@ def reset_conversation() -> None:
 
 
 def reset_profile() -> None:
-    # Runs as a callback, before the widgets exist, so their keys can be cleared.
+    # Popping the widget keys is not enough: the browser keeps each widget's last
+    # value and sends it back on the next rerun. New keys make fresh widgets.
     reset_conversation()
-    for key in PROFILE_KEYS:
-        st.session_state.pop(key, None)
+    st.session_state.profile_generation = profile_generation() + 1
+
+
+def profile_generation() -> int:
+    return st.session_state.get("profile_generation", 0)
 
 
 def render_reserve_badge(emergency_fund: float, monthly_cost: float) -> None:
@@ -90,19 +90,20 @@ def render_sidebar(key_required: bool) -> InvestorProfile:
             st.button("Nova conversa", icon=":material/add_comment:", on_click=reset_conversation)
             st.button("Limpar perfil", icon=":material/restart_alt:", on_click=reset_profile)
         st.subheader("Seu perfil", icon=":material/person:")
+        gen = profile_generation()
         risk_profile = st.segmented_control(
             "Perfil de investidor",
             list(RISK_LABELS),
             default="moderate",
             required=True,
             format_func=RISK_LABELS.get,
-            key="risk_profile",
+            key=f"risk_profile_{gen}",
         )
         with st.container(border=True):
-            invested_assets = money_input("Patrimônio investido (R$)", key="invested_assets")
-            emergency_fund = money_input("Reserva de emergência (R$)", key="emergency_fund")
-            monthly_cost = money_input("Custo de vida mensal (R$)", key="monthly_cost")
-            monthly_contribution = money_input("Aporte mensal (R$)", key="monthly_contribution")
+            invested_assets = money_input("Patrimônio investido (R$)", key=f"invested_assets_{gen}")
+            emergency_fund = money_input("Reserva de emergência (R$)", key=f"emergency_fund_{gen}")
+            monthly_cost = money_input("Custo de vida mensal (R$)", key=f"monthly_cost_{gen}")
+            monthly_contribution = money_input("Aporte mensal (R$)", key=f"monthly_contribution_{gen}")
             render_reserve_badge(emergency_fund, monthly_cost)
         st.subheader("Objetivos", icon=":material/flag:")
         goals_table = st.data_editor(
@@ -120,7 +121,7 @@ def render_sidebar(key_required: bool) -> InvestorProfile:
                 "target_amount": st.column_config.NumberColumn("Valor (R$)", min_value=0),
                 "horizon_years": st.column_config.NumberColumn("Anos", min_value=0),
             },
-            key="goals",
+            key=f"goals_{gen}",
             alt="Objetivos financeiros com valor-alvo e prazo",
         )
         render_indicators()
