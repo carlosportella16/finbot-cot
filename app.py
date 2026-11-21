@@ -1,8 +1,10 @@
 """FinBot Streamlit UI.
 
-Checks GEMINI_API_KEY, collects the investor profile in the sidebar and talks to
-Gemini through a chat session that keeps the conversation context. The profile
-goes into the system instruction; changing it recreates the chat with its history.
+Checks GEMINI_API_KEY, collects the investor profile in the sidebar and answers
+each question through the Chain-of-Thought pipeline (reasoning.run_turn). The plan,
+analysis and sources of every answer stay in a collapsed "Ver raciocínio" expander.
+The profile goes into the system instruction; changing it recreates the chat with
+its history.
 """
 
 import os
@@ -14,9 +16,9 @@ from google import genai
 from google.genai import types
 
 from market import get_indicators
-from models import InvestorProfile, parse_goals
+from models import InvestorProfile, TurnResult, parse_goals
 from prompts import SYSTEM_INSTRUCTION
-from reasoning import MODEL
+from reasoning import MODEL, run_turn
 
 RISK_LABELS = {"conservative": "Conservador", "moderate": "Moderado", "aggressive": "Arrojado"}
 INDICATOR_LABELS = {"selic": "Selic", "cdi": "CDI", "ipca_12m": "IPCA 12m"}
@@ -57,6 +59,33 @@ def create_chat(profile: InvestorProfile, history=None):
 def br_date(iso: str) -> str:
     year, month, day = iso.split("-")
     return f"{day}/{month}/{year}"
+
+
+def render_reasoning(turn: TurnResult) -> None:
+    plan = turn.plan
+    with st.expander("Ver raciocínio", type="compact"):
+        st.markdown(f"**Intenção:** {plan.intent}")
+        if plan.related_goal:
+            st.markdown(f"**Objetivo relacionado:** {plan.related_goal}")
+        st.markdown(f"**Buscou notícias:** {'sim' if plan.needs_news else 'não'}")
+        st.markdown("**Passos do plano**\n\n" + "\n".join(
+            f"{i}. {step}" for i, step in enumerate(plan.steps, 1)
+        ))
+        st.markdown("**Análise**")
+        st.markdown(turn.analysis)
+        if turn.sources:
+            st.markdown("**Fontes**\n\n" + "\n".join(
+                f"- [{source.title}]({source.uri})" for source in turn.sources
+            ))
+
+
+def render_assistant(message: dict) -> None:
+    # Shared by the history loop and the new turn, so old and new answers match.
+    st.markdown(message["content"])
+    turn = message["turn"]
+    if turn.warnings:
+        st.caption("Nota: " + "; ".join(turn.warnings) + ".")
+    render_reasoning(turn)
 
 
 with st.sidebar:
@@ -139,19 +168,20 @@ st.sidebar.caption(
     "Conteúdo educacional. Não é recomendação de investimento; a decisão é sempre sua."
 )
 
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        if message["role"] == "assistant":
+            render_assistant(message)
+        else:
+            st.markdown(message["content"])
 
 if question := st.chat_input("Pergunte sobre seus investimentos"):
     with st.chat_message("user"):
         st.markdown(question)
     with st.chat_message("assistant"):
-        with st.spinner("Pensando…"):
-            answer = st.session_state.chat.send_message(question).text
-        st.markdown(answer)
-    # Appended only after the model answered, so a failed call leaves history untouched.
-    st.session_state.messages += [
-        {"role": "user", "content": question},
-        {"role": "assistant", "content": answer},
-    ]
+        turn = run_turn(get_client(), st.session_state.chat, question, profile)
+        answer = {"role": "assistant", "content": turn.answer, "turn": turn}
+        render_assistant(answer)
+    # Appended only after the pipeline answered, so a failed turn leaves history untouched.
+    st.session_state.messages += [{"role": "user", "content": question}, answer]

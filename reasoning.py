@@ -14,7 +14,7 @@ from google.genai import types
 from pydantic import ValidationError
 
 from market import get_indicators
-from models import InvestorProfile, Plan, TurnResult, default_plan
+from models import InvestorProfile, Plan, Source, TurnResult, default_plan
 from prompts import ANALYSIS_PROMPT, PLAN_PROMPT, SYNTHESIS_PROMPT, SYSTEM_INSTRUCTION
 
 MODEL = "gemini-3.1-flash-lite"
@@ -48,7 +48,7 @@ def analyze(
     context: str,
     indicators: dict,
     system: str,
-) -> tuple[str, list[str], list[str]]:
+) -> tuple[str, list[Source], list[str]]:
     """Stage 2: step-by-step analysis. Returns (analysis, sources, warnings)."""
     prompt = ANALYSIS_PROMPT.format(
         context=context,
@@ -76,7 +76,9 @@ def analyze(
     except Exception:
         # Search blocked or failed: the answer still comes, without news.
         return call().text, [], ["sem notícias recentes"]
-    return response.text, grounding_sources(response), []
+    sources = grounding_sources(response)
+    # The model decides whether to actually search; no sources means no news was used.
+    return response.text, sources, [] if sources else ["sem notícias recentes"]
 
 
 def synthesize(chat, question: str, analysis: str) -> str:
@@ -125,7 +127,11 @@ def format_indicators(indicators: dict) -> str:
     )
 
 
-def grounding_sources(response: types.GenerateContentResponse) -> list[str]:
+def grounding_sources(response: types.GenerateContentResponse) -> list[Source]:
     metadata = response.candidates[0].grounding_metadata if response.candidates else None
     chunks = (metadata.grounding_chunks if metadata else None) or []
-    return [chunk.web.uri for chunk in chunks if chunk.web and chunk.web.uri]
+    return [
+        Source(title=chunk.web.title or chunk.web.uri, uri=chunk.web.uri)
+        for chunk in chunks
+        if chunk.web and chunk.web.uri
+    ]

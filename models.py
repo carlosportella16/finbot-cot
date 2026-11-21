@@ -1,6 +1,6 @@
 """FinBot Pydantic models.
 
-InvestorProfile, Goal, Plan (stage 1 response_schema) and TurnResult.
+InvestorProfile, Goal, Plan (stage 1 response_schema), Source and TurnResult.
 """
 
 from typing import Literal
@@ -60,9 +60,14 @@ def default_plan(question: str) -> Plan:
     )
 
 
+class Source(BaseModel):
+    title: str  # usually the site domain; the uri is a Google redirect link
+    uri: str
+
+
 class TurnResult(BaseModel):
     answer: str
     plan: Plan
     analysis: str
-    sources: list[str] = []  # URLs from the search grounding metadata
+    sources: list[Source] = []  # from the search grounding metadata
     warnings: list[str] = []
