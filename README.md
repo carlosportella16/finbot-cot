@@ -2,6 +2,10 @@
 
 Financial planning chatbot built with Streamlit and Gemini (`gemini-3.1-flash-lite`). It evaluates investments based on the user's profile, net worth and goals, plus current market conditions (Selic, CDI and IPCA from the Central Bank of Brazil).
 
+- **Live app:** https://finbot-cot.streamlit.app/
+- **Demo video:** https://www.youtube.com/watch?v=mgVyPzSlVZ4
+- **Source code:** https://github.com/carlosportella16/finbot-cot
+
 > **Disclaimer:** this is an educational project. It is not investment advice. The final decision is always the user's.
 
 ## How it works
